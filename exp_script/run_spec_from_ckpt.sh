@@ -195,7 +195,7 @@ then
 fi
 mkdir -p $OUTPUT_DIR
 
-RUN_DIR=$SPEC_PATH/benchspec/CPU2006/$BENCHMARK_CODE/run/run_base_ref_x86_64.0000
+RUN_DIR=$SPEC_PATH/benchspec/CPU2006/$BENCHMARK_CODE/run/run_base_ref_amd64.0001
 #run_base_ref\_my-alpha.0000
 # Run directory for the selected SPEC benchmark
 SCRIPT_OUT=$OUTPUT_DIR/runscript.log
@@ -227,7 +227,7 @@ echo "" | tee -a $SCRIPT_OUT
 echo "" | tee -a $SCRIPT_OUT
  
 # Actually launch gem5!
-$GEM5_PATH/build/X86_MESI_Two_Level/gem5.fast \
+$GEM5_PATH/build/X86_MESI_Two_Level/gem5.opt \
 	--outdir=$OUTPUT_DIR $GEM5_PATH/configs/example/spec06_config.py \
 	--benchmark=$BENCHMARK --benchmark_stdout=$OUTPUT_DIR/$BENCHMARK.out \
 	--benchmark_stderr=$OUTPUT_DIR/$BENCHMARK.err \
