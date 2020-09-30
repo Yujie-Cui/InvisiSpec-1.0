@@ -1044,7 +1044,7 @@ LSQUnit<Impl>::updateVisibleState()
         DynInstPtr inst = loadQueue[load_idx];
 
         if (!loadInExec){
-
+            //fence
             if ( (isFuturistic && inst->isPrevInstsCommitted()) ||
                     (!isFuturistic && inst->isPrevBrsCommitted())){
                 if (inst->fenceDelay()){
@@ -1070,11 +1070,11 @@ LSQUnit<Impl>::updateVisibleState()
                     DPRINTF(LSQUnit, "Set readyToExpose for "
                             "inst [sn:%lli] PC %s\n",
                         inst->seqNum, inst->pcState());
-                    if (inst->needPostFetch()){
+                    if (inst->needPostFetch()){ //indicates need validation or expose
                         ++loadsToVLD;
                     }
                 }
-                inst->readyToExpose(true);
+                inst->readyToExpose(true);//indicate the load is legal to be visible
             }else {
                 if (inst->readyToExpose()){
                     DPRINTF(LSQUnit, "The load can not be validated "

@@ -1170,13 +1170,15 @@ DefaultFetch<Impl>::fetch(bool &status_change)
     DPRINTF(Fetch, "Attempting to fetch from [tid:%i]\n", tid);
 
     // The current PC.
-    TheISA::PCState thisPC = pc[tid];
+    //via instAddr() func can get the addr
+    TheISA::PCState thisPC = pc[tid];  
+
 
     Addr pcOffset = fetchOffset[tid];
     Addr fetchAddr = (thisPC.instAddr() + pcOffset) & BaseCPU::PCMask;
 
     bool inRom = isRomMicroPC(thisPC.microPC());
-
+    DPRINTF(Fetch, "[tid:%i]: inRom=%d.\n", tid,inRom);
     // If returning from the delay of a cache miss, then update the status
     // to running, otherwise do the cache access.  Possibly move this up
     // to tick() function.
@@ -1224,12 +1226,12 @@ DefaultFetch<Impl>::fetch(bool &status_change)
         return;
     }
 
-    ++fetchCycles;
+    ++fetchCycles;    // like counter
 
     TheISA::PCState nextPC = thisPC;
 
     StaticInstPtr staticInst = NULL;
-    StaticInstPtr curMacroop = macroop[tid];
+    StaticInstPtr curMacroop = macroop[tid]; //Macro operation
 
     // If the read of the first instruction was successful, then grab the
     // instructions from the rest of the cache line and put them into the
@@ -1248,14 +1250,28 @@ DefaultFetch<Impl>::fetch(bool &status_change)
     TheISA::MachInst *cacheInsts =
         reinterpret_cast<TheISA::MachInst *>(fetchBuffer[tid]);
 
-    const unsigned numInsts = fetchBufferSize / instSize;
+    const unsigned numInsts = fetchBufferSize / instSize;  //instSize=8 
     unsigned blkOffset = (fetchAddr - fetchBufferPC[tid]) / instSize;
 
     // Loop through instruction memory from the cache.
     // Keep issuing while fetchWidth is available and branch is not
     // predicted taken
+
+    //watch {numInst,fetchWidth,fetchQueue[tid].size(),fetchQueueSize,predictedBranch,quiesce}
+    ////home/cuiyujie/workspace/InvisiSpec/src/cpu/o3/fetch_impl.hh:1264
+    // set inferior-tty /dev/pts/2440
+
+
+    //assert(fetchQueue[tid].size() < fetchQueueSize);
     while (numInst < fetchWidth && fetchQueue[tid].size() < fetchQueueSize
            && !predictedBranch && !quiesce) {
+
+        DPRINTF(Fetch, "\n\n[tid:%i]: numInst=%d,fetchWidth=%u,fetchQueue[tid].size()=%d,\
+        fetchQueueSize=%u,predictedBranch=%d,quiesce=%d\n,inRom=%d,blkOffset=%u\n", \
+        tid,numInst,fetchWidth,fetchQueue[tid].size(),fetchQueueSize,\
+        predictedBranch,quiesce,inRom,blkOffset);
+
+       
         // We need to process more memory if we aren't going to get a
         // StaticInst from the rom, the current macroop, or what's already
         // in the decoder.
@@ -1264,14 +1280,25 @@ DefaultFetch<Impl>::fetch(bool &status_change)
         fetchAddr = (thisPC.instAddr() + pcOffset) & BaseCPU::PCMask;
         Addr fetchBufferBlockPC = fetchBufferAlignPC(fetchAddr);
 
+         DPRINTF(Fetch, "\n\n[tid:%i]: fetchAddr=%lx , fetchBufferBlockPC=%lx\n", \
+        tid,fetchAddr,fetchBufferBlockPC);
+
         if (needMem) {
+            DPRINTF(Fetch, "[tid:%i]: need memory\n", tid);
             // If buffer is no longer valid or fetchAddr has moved to point
             // to the next cache block then start fetch from icache.
+            DPRINTF(Fetch, "\n\n[tid:%i]: fetchAddr=%lx,fetchBufferBlockPC=%lx\n", \
+                tid,fetchAddr,fetchBufferBlockPC);
             if (!fetchBufferValid[tid] ||
-                fetchBufferBlockPC != fetchBufferPC[tid])
-                break;
+                fetchBufferBlockPC != fetchBufferPC[tid]){
+                    //not same cacheline?
+                    break;
+                }
+                
 
             if (blkOffset >= numInsts) {
+                 DPRINTF(Fetch, "[tid:%i]: numInsts=%d,blkOffset=%u\n", \
+                 tid,numInsts,blkOffset);
                 // We need to process more memory, but we've run out of the
                 // current block.
                 break;
@@ -1281,6 +1308,7 @@ DefaultFetch<Impl>::fetch(bool &status_change)
             decoder[tid]->moreBytes(thisPC, fetchAddr, inst);
 
             if (decoder[tid]->needMoreBytes()) {
+                DPRINTF(Fetch, "\n[tid:%i]: decoder[tid]->needMoreBytes()\n\n", tid);
                 blkOffset++;
                 fetchAddr += instSize;
                 pcOffset += instSize;
@@ -1289,20 +1317,26 @@ DefaultFetch<Impl>::fetch(bool &status_change)
 
         // Extract as many instructions and/or microops as we can from
         // the memory we've processed so far.
-        do {
+        do { 
+             DPRINTF(Fetch, "[tid:%i]:inRom=%d \n", tid,inRom);
             if (!(curMacroop || inRom)) {
                 if (decoder[tid]->instReady()) {
+
+                    DPRINTF(Fetch, "[tid:%i]: decoder[tid]->instReady() \n", tid);
                     staticInst = decoder[tid]->decode(thisPC);
 
                     // Increment stat of fetched instructions.
+                    //Stat for total number of fetched instructions.
                     ++fetchedInsts;
 
                     if (staticInst->isMacroop()) {
+                        DPRINTF(Fetch, "[tid:%i]: staticInst->isMacroop() \n", tid);
                         curMacroop = staticInst;
                     } else {
                         pcOffset = 0;
                     }
                 } else {
+                     DPRINTF(Fetch, "break do-while \n", tid);
                     // We need more bytes for this instruction so blkOffset and
                     // pcOffset will be updated
                     break;
@@ -1314,9 +1348,11 @@ DefaultFetch<Impl>::fetch(bool &status_change)
             bool newMacro = false;
             if (curMacroop || inRom) {
                 if (inRom) {
+                     DPRINTF(Fetch, "[tid:%i]: inRom \n", tid);
                     staticInst = cpu->microcodeRom.fetchMicroop(
                             thisPC.microPC(), curMacroop);
                 } else {
+                    DPRINTF(Fetch, "[tid:%i]: curMacroop \n", tid);
                     staticInst = curMacroop->fetchMicroop(thisPC.microPC());
                 }
                 newMacro |= staticInst->isLastMicroop();
@@ -1340,8 +1376,10 @@ DefaultFetch<Impl>::fetch(bool &status_change)
             // If we're branching after this instruction, quit fetching
             // from the same block.
             predictedBranch |= thisPC.branching();
+           DPRINTF(Fetch, "thisPC=%s, nextPC = %s\n", thisPC.instAddr(),nextPC.instAddr());
             predictedBranch |=
                 lookupAndUpdateNextPC(instruction, nextPC);
+            DPRINTF(Fetch, "thisPC=%s, nextPC = %s\n", thisPC.instAddr(),nextPC.instAddr());
             if (predictedBranch) {
                 DPRINTF(Fetch, "Branch detected with PC = %s\n", thisPC);
             }
@@ -1353,6 +1391,7 @@ DefaultFetch<Impl>::fetch(bool &status_change)
             inRom = isRomMicroPC(thisPC.microPC());
 
             if (newMacro) {
+                DPRINTF(Fetch, "newMacro\n");
                 fetchAddr = thisPC.instAddr() & BaseCPU::PCMask;
                 blkOffset = (fetchAddr - fetchBufferPC[tid]) / instSize;
                 pcOffset = 0;
@@ -1367,6 +1406,12 @@ DefaultFetch<Impl>::fetch(bool &status_change)
                 quiesce = true;
                 break;
             }
+
+            DPRINTF(Fetch, "[tid:%i]: before while numInst=%d,fetchQueue[tid].size()=%i,\
+            ,predictedBranch=%d,quiesce=%d\n,inRom=%d,blkOffset=%u, \n\n", \
+            tid,numInst,fetchQueue[tid].size(),\
+            predictedBranch,quiesce,inRom,blkOffset);
+
         } while ((curMacroop || decoder[tid]->instReady()) &&
                  numInst < fetchWidth &&
                  fetchQueue[tid].size() < fetchQueueSize);

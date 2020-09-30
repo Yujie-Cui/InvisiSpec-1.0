@@ -457,6 +457,8 @@ DefaultRename<Impl>::rename(bool &status_change, ThreadID tid)
     //     buffer any instructions coming from decode
     //     continue trying to empty skid buffer
     //     check if stall conditions have passed
+    
+    DPRINTF(Rename, "[tid:%u]:renameStatus[tid]=%d\n", tid,renameStatus[tid]);     
 
     if (renameStatus[tid] == Blocked) {
         ++renameBlockCycles;

@@ -432,7 +432,7 @@ if main['GCC']:
     # the first hyphen
     as_version = as_version_raw[-1].split('-')[0] if as_version_raw else None
 
-    if not as_version or compareVersions(as_version, "2.23") < 0:
+    if not as_version or compareVersions("2.33.1", "2.23") < 0:
         print termcap.Yellow + termcap.Bold + \
             'Warning: This combination of gcc and binutils have' + \
             ' known incompatibilities.\n' + \

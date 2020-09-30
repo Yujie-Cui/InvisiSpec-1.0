@@ -593,6 +593,7 @@ DefaultDecode<Impl>::decode(bool &status_change, ThreadID tid)
     //     continue trying to empty skid buffer
     //     check if stall conditions have passed
 
+    DPRINTF(Decode, "[tid:%u]:decodeStatus[tid]=%d\n",tid,decodeStatus[tid]);
     if (decodeStatus[tid] == Blocked) {
         ++decodeBlockedCycles;
     } else if (decodeStatus[tid] == Squashing) {
@@ -740,8 +741,8 @@ DefaultDecode<Impl>::decodeInsts(ThreadID tid)
                 inst->setPredTarg(target);
                 break;
             }
-        }
     }
+        }
 
     // If we didn't process all instructions, then we will need to block
     // and put all those instructions into the skid buffer.

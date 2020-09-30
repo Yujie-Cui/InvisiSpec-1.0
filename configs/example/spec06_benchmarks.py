@@ -6,7 +6,8 @@ from m5.objects import *
 #spec_dir = '<FULL_PATH_TO_YOUR_SPEC_CPU2006_INSTALL>'
 #out_dir = '<FULL_PATH_TO_DESIRED_OUTPUT_DIRECTORY>'
 
-x86_suffix = '_base.x86_64'
+#x86_suffix = '_base.x86_64'
+x86_suffix = '_base.amd64'
 #'_base.my-alpha'
 
 #temp
