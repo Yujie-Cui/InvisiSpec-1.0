@@ -64,7 +64,7 @@ from common.Caches import *
 from common.cpu2000 import *
 
 import spec06_benchmarks
-import attack_code_benckmarks
+import attack_code_benchmarks
 
 # Check if KVM support has been enabled, we might need to do VM
 # configuration if that's the case.
@@ -128,12 +128,9 @@ parser = optparse.OptionParser()
 Options.addCommonOptions(parser)
 Options.addSEOptions(parser)
 
-parser.add_option("-b", "--benchmark", type="string", default="",\
-     help="The SPEC benchmark to be loaded.")
-parser.add_option("--benchmark_stdout", type="string", default="",\
-     help="Absolute path for stdout redirection for the benchmark.")
-parser.add_option("--benchmark_stderr", type="string", default="",\
-     help="Absolute path for stderr redirection for the benchmark.")
+parser.add_option("-b", "--benchmark", type="string", default="", help="The SPEC benchmark to be loaded.")
+parser.add_option("--benchmark_stdout", type="string", default="", help="Absolute path for stdout redirection for the benchmark.")
+parser.add_option("--benchmark_stderr", type="string", default="", help="Absolute path for stderr redirection for the benchmark.")
 
 if '--ruby' in sys.argv:
     Ruby.define_options(parser)
@@ -244,13 +241,12 @@ if options.benchmark:
         process = spec06_benchmarks.specrand_f
     elif options.benchmark == 'hello':
         print '--> attack_code'
-        process = attack_code_benckmarks.attack_code
+        process = attack_code_benchmarks.attack_code
     else:
         print "No recognized SPEC2006 benchmark selected! Exiting."
         sys.exit(1)
 else:
-    print >> sys.stderr,\
-         "Need --benchmark switch to specify SPEC CPU2006 workload. Exiting!\n"
+    print >> sys.stderr, "Need --benchmark switch to specify SPEC CPU2006 workload. Exiting!\n"
     sys.exit(1)
 
 # Set process stdout/stderr
